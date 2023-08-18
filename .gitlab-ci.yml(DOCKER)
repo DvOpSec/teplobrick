@@ -1,0 +1,50 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+  
+build-job:
+  image: docker:20.10.16
+  stage: build
+  services:
+    - docker:20.10.16-dind
+  before_script:
+    - docker info
+  script: 
+    - docker build -t $REGISTRY_URL/root/teplobrick-docker .
+    - docker login -u $REGISTRY_LOGIN -p $GITLAB_REGISTRY_TOKEN $REGISTRY_URL 
+    - docker push $REGISTRY_URL/root/teplobrick-docker 
+  only: 
+    - main
+
+deploy-job:
+  image: alpine:latest
+  stage: deploy
+  script:
+    - apk update && apk add openssh-client
+    - mkdir -p ~/.ssh
+    - echo "$DEPLOY_SERVER_SSH" | tr -d '\r' > ~/.ssh/gitlab
+    - chmod 700 ~/.ssh/gitlab
+    - eval "$(ssh-agent -s)"
+    - ssh-add ~/.ssh/gitlab
+    - ssh-keyscan -H 'gitlab.com' >> ~/.ssh/known_hosts
+    - ssh -o StrictHostKeyChecking=no $SSH_USER_IP "docker login -u $REGISTRY_LOGIN -p $GITLAB_REGISTRY_TOKEN $REGISTRY_URL"
+    - ssh -o StrictHostKeyChecking=no $SSH_USER_IP "docker pull $REGISTRY_URL/root/teplobrick-docker"
+    - ssh -o StrictHostKeyChecking=no $SSH_USER_IP "docker kill my_app || true"
+    - ssh -o StrictHostKeyChecking=no $SSH_USER_IP "my_app || true"
+    - ssh -o StrictHostKeyChecking=no $SSH_USER_IP "docker run -p 80:80 -d --name my_app $REGISTRY_URL/root/teplobrick-docker"     
+  only: 
+    - main
+
+pages:
+  script:
+   - ls 
+   - echo "Hello"
+  artifacts:
+    paths:
+      - public
+  except:
+    - main

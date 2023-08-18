@@ -1,0 +1,33 @@
+stages:
+  - build
+  - deploy
+
+build-job:
+  stage: build
+  script: 
+   - echo "Building beginning..."
+
+deploy-job:
+  stage: deploy
+  image: nginx:latest
+  script:
+    - apt-get update && apt-get install -y rsync && apt-get install -y openssh-client
+    - mkdir -p ~/.ssh
+    - echo "$SSH_KEYGEN" | tr -d '\r' > ~/.ssh/gitlab
+    - chmod 700 ~/.ssh/gitlab
+    - eval "$(ssh-agent -s)"
+    - ssh-add ~/.ssh/gitlab
+    - ssh-keyscan -H 'gitlab.com' >> ~/.ssh/known_hosts
+    - rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" -r ./public/ u2163382@37.140.192.146:/var/www/u2163382/data/www/teplobrick.ru
+  only:
+    - main  
+
+pages:
+  script:
+   - ls 
+   - echo "Hello"
+  artifacts:
+    paths:
+      - public
+  except:
+    - main
