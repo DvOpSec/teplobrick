@@ -34,7 +34,7 @@ deploy-job:
     - ssh -o StrictHostKeyChecking=no $SSH_USER_IP "docker login -u $REGISTRY_LOGIN -p $GITLAB_REGISTRY_TOKEN $REGISTRY_URL"
     - ssh -o StrictHostKeyChecking=no $SSH_USER_IP "docker pull $REGISTRY_URL/root/teplobrick-docker"
     - ssh -o StrictHostKeyChecking=no $SSH_USER_IP "docker kill my_app || true"
-    - ssh -o StrictHostKeyChecking=no $SSH_USER_IP "my_app || true"
+    - ssh -o StrictHostKeyChecking=no $SSH_USER_IP "docker container rm -f my_app || true"
     - ssh -o StrictHostKeyChecking=no $SSH_USER_IP "docker run -p 80:80 -d --name my_app $REGISTRY_URL/root/teplobrick-docker"     
   only: 
     - main
